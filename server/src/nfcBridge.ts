@@ -12,7 +12,7 @@ export interface TagEvent {
 export type TagHandler = (event: TagEvent) => void
 
 export type NfcStatus = {
-  mode: 'mock' | 'hardware' | 'starting' | 'error'
+  mode: 'off' | 'mock' | 'hardware' | 'starting' | 'error'
   firmware?: string
   lastError?: string
   lastUid?: string
@@ -288,7 +288,18 @@ export class AutoNfcBridge extends BaseBridge {
   }
 }
 
+/** Без PN532 и mock: карты только через WS playCard. */
+export class DisabledNfcBridge extends BaseBridge {
+  start(): void {
+    this.status = { mode: 'off' }
+    console.log('[NFC] disabled — play cards via WS event playCard')
+  }
+
+  stop(): void {}
+}
+
 export function createNfcBridge(): NfcBridge {
+  if (NFC_MODE === 'off') return new DisabledNfcBridge()
   if (NFC_MODE === 'mock') return new MockNfcBridge()
   if (NFC_MODE === 'hardware') return new PythonNfcBridge()
   return new AutoNfcBridge()

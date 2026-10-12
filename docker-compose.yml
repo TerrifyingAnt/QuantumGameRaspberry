@@ -1,5 +1,5 @@
 # Запуск: docker compose up --build
-# По умолчанию NFC_MOCK=1 (без PN532). С железом: docker compose -f docker-compose.yml -f docker-compose.hardware.yml up --build
+# Онлайн по умолчанию: лобби + телефоны, карты через WS (NFC_MODE=off).
 
 services:
   app:
@@ -13,10 +13,8 @@ services:
     environment:
       HOST: "0.0.0.0"
       PORT: "8080"
-      # На ПК по умолчанию mock; на Pi с ридером: NFC_MODE=hardware или overlay hardware
-      NFC_MODE: "${NFC_MODE:-mock}"
-      NFC_MOCK: "${NFC_MOCK:-1}"
-      TABLETOP_MODE: "${TABLETOP_MODE:-1}"
+      NFC_MODE: "${NFC_MODE:-off}"
+      TABLETOP_MODE: "${TABLETOP_MODE:-0}"
       TABLETOP_CUBITS: "${TABLETOP_CUBITS:-4}"
       FRONT_DIST: /app/front/dist
       CARD_REGISTRY_PATH: /app/server/data/card-registry.json

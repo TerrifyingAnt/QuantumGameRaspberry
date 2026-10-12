@@ -3,10 +3,20 @@ import { useState, useSyncExternalStore } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '../../components/Button/Button'
 import { getConnectionState, subscribeConnection } from '../../api/connection'
-import { cardInput, dismissCantPlay, getGameData, getRejectSeq, giveUp, selectTarget, startGame, subscribeGame } from '../../api/game'
+import {
+  cardInput,
+  dismissCantPlay,
+  getGameData,
+  getRejectSeq,
+  giveUp,
+  playCard,
+  selectTarget,
+  startGame,
+  subscribeGame,
+} from '../../api/game'
 import type { GameStateData } from '../../api/events'
 import type { BoardOwner } from '../../game/types'
-import { getDiceImageUrl } from '../../lib/assets'
+import { getCardImageUrl, getDiceImageUrl } from '../../lib/assets'
 import { diceFaceOf, parseDiceFace } from '../../lib/dice'
 import { cubitCountLabel } from '../../lib/plural'
 import type { DiceState } from '../../types/dice'
@@ -17,6 +27,14 @@ import { DiceChoiceModal } from '../../components/DiceChoiceModal/DiceChoiceModa
 import { QubitSlot } from './QubitSlot'
 import { RulesFrame } from './RulesFrame'
 import s from './GamePage.module.css'
+
+/** Карты без selectTarget (как requirement None / kronecker на сервере). */
+const NO_TARGET_CARDS = new Set<CardId>([
+  'identity',
+  'barrier',
+  'reshuffle',
+  'kronecker_multiplication',
+])
 
 const avatar = (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -123,6 +141,23 @@ export const GamePage = () => {
       target: { player, cubit },
     })
   }
+
+  const onPlayCard = (cardId: CardId) => {
+    if (!myTurn || awaitingSecond || needsInput !== null) return
+    if (!NO_TARGET_CARDS.has(cardId) && selectedTarget === null) return
+    playCard(cardId)
+  }
+
+  const canPickCards = myTurn && !awaitingSecond && needsInput === null
+  const kroneckerBanner = state !== null && state.kronecker !== null
+  const hintText = (() => {
+    if (!myTurn || awaitingSecond || needsInput !== null || kroneckerBanner) return null
+    if (selectedTarget === null) {
+      return 'Коснитесь кубита, затем выберите карту внизу (identity / barrier — сразу)'
+    }
+    return 'Выберите карту'
+  })()
+
   const nicknameOf = (playerId: number): string =>
     onlineUsers.find((user) => user.id === playerId)?.name ?? 'Игрок'
 
@@ -233,19 +268,40 @@ export const GamePage = () => {
           </div>
         )}
 
-        {!awaitingSecond && !(state !== null && state.kronecker !== null) && (
-          <div className={s.awaitBanner} style={{ visibility: "hidden" }}>
+        {hintText && <div className={s.awaitBanner}>{hintText}</div>}
+
+        {!hintText && !awaitingSecond && !(state !== null && state.kronecker !== null) && (
+          <div className={s.awaitBanner} style={{ visibility: 'hidden' }}>
             ---
           </div>
         )}
-
-        
-
 
         <section className={s.boardSection}>
           <div className={s.boardContainer}>
             {renderRow('opponent', 'Соперник', opponentSlots, otherIndex)}
             {renderRow('my', 'Ваш ряд', mySlots, myIndex)}
+          </div>
+        </section>
+
+        <section className={s.cardTray} aria-label="Карты">
+          <div className={s.cardTrayScroll}>
+            {ALL_CARD_IDS.map((cardId) => {
+              const needsTarget = !NO_TARGET_CARDS.has(cardId)
+              const enabled =
+                canPickCards && (!needsTarget || selectedTarget !== null)
+              return (
+                <button
+                  key={cardId}
+                  type="button"
+                  className={`${s.cardTrayItem}${enabled ? ` ${s.cardTrayItemReady}` : ''}`}
+                  disabled={!enabled}
+                  onClick={() => onPlayCard(cardId)}
+                  title={cardId}
+                >
+                  <img src={getCardImageUrl(cardId)} alt={cardId} draggable={false} />
+                </button>
+              )
+            })}
           </div>
         </section>
       </main>

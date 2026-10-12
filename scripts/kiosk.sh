@@ -2,7 +2,7 @@
 # Chromium kiosk на локальном экране Pi.
 set -euo pipefail
 
-URL="${1:-http://localhost:8080/tabletop}"
+URL="${1:-http://localhost:8080/}"
 CHROME="${CHROMIUM_BIN:-}"
 
 if [[ -z "$CHROME" ]]; then

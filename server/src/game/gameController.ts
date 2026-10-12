@@ -47,6 +47,9 @@ export class GameController {
   private kroneckerPairCards = 0
   private kroneckerRegisters: number[] = []
 
+  /** Счётчик для синтетических UID онлайн-карт (каждая сыгранная карта уникальна). */
+  private onlineCardSeq = 0
+
   constructor(
     private readonly ws: WsHub,
     private readonly nfc: NfcBridge,
@@ -65,6 +68,7 @@ export class GameController {
 
     this.ws.on('startGame', (_id, data) => this.startGame(data))
     this.ws.on('selectTarget', (id, data) => this.selectTarget(id, data))
+    this.ws.on('playCard', (id, data) => this.playCard(id, data))
     this.ws.on('writeCard', (id, data) => this.writeCard(id, data))
     this.ws.on('giveUp', (id) => this.giveUp(id))
     this.ws.on('cardInput', (id, data) => this.cardInput(id, data))
@@ -203,6 +207,31 @@ export class GameController {
       console.log(`[Game] Unknown card (uid: ${uidHex})`)
       return
     }
+
+    this.tryPlayCard(type, uidHex)
+  }
+
+  /**
+   * Онлайн: сыграть карту с телефона без NFC.
+   * data: { "type": "pauli_x" } — имя типа из cards.md.
+   */
+  private playCard(clientId: number, data: unknown): void {
+    if (!this.isGameOn || !this.gameState) return
+    if (!this.isCurrentActor(clientId)) return
+    if (typeof data !== 'object' || data === null) return
+    const typeName = (data as { type?: unknown }).type
+    if (typeof typeName !== 'string' || !isCardType(typeName)) {
+      console.log(`[Game] playCard: unknown type ${String(typeName)}`)
+      return
+    }
+    this.onlineCardSeq += 1
+    const uidHex = `online-${this.onlineCardSeq.toString(16)}`
+    this.tryPlayCard(typeName, uidHex)
+  }
+
+  /** Общая логика применения карты (NFC-скан или WS playCard). */
+  private tryPlayCard(type: CardType, uidHex: string): void {
+    if (!this.gameState) return
 
     console.log(`[Game] Card ${type}`)
 

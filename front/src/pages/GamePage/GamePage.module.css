@@ -602,6 +602,57 @@
     box-shadow: 0 0 10px rgba(108, 140, 255, 0.25);
 }
 
+.cardTray {
+    flex-shrink: 0;
+    width: 100%;
+    margin-top: auto;
+    padding: 0.35rem 0 0.15rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.cardTrayScroll {
+    display: flex;
+    flex-direction: row;
+    gap: 0.45rem;
+    overflow-x: auto;
+    padding: 0.35rem 0.15rem 0.5rem;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+}
+
+.cardTrayItem {
+    flex: 0 0 auto;
+    width: 3.4rem;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 0.4rem;
+    background: none;
+    opacity: 0.38;
+    cursor: default;
+}
+
+.cardTrayItem img {
+    display: block;
+    width: 100%;
+    border-radius: 0.3rem;
+    pointer-events: none;
+}
+
+.cardTrayItemReady {
+    opacity: 1;
+    cursor: pointer;
+    border-color: rgba(157, 178, 255, 0.45);
+}
+
+.cardTrayItemReady:hover {
+    border-color: rgba(157, 178, 255, 0.9);
+    box-shadow: 0 0 10px rgba(108, 140, 255, 0.28);
+}
+
+.cardTrayItem:disabled {
+    opacity: 0.38;
+}
+
 /* Большой экран / kiosk на Raspberry Pi */
 @media (min-width: 900px) {
     :global(html.kiosk) .main {

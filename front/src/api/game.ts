@@ -87,6 +87,11 @@ export function selectTarget(player: number, cubit: number): boolean {
   return sendSocketMessage({ event: 'selectTarget', data: { player, cubit } })
 }
 
+/** Сыграть карту онлайн (без NFC): type — имя из cards.md. */
+export function playCard(type: string): boolean {
+  return sendSocketMessage({ event: 'playCard', data: { type } })
+}
+
 /** Отправить giveUp — сдаться (data-часть контрактом не используется). */
 export function giveUp(): boolean {
   return sendSocketMessage({ event: 'giveUp' })

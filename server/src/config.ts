@@ -20,22 +20,27 @@ export const CARD_REGISTRY_PATH = process.env.CARD_REGISTRY_PATH
   : path.join(REPO_ROOT, 'server', 'data', 'card-registry.json')
 
 /**
- * NFC_MODE: mock | hardware | auto
+ * NFC_MODE: off | mock | hardware | auto
+ * По умолчанию off — полностью онлайн, без ридера.
  * NFC_MOCK=1 — совместимость (эквивалент mock).
  */
-function resolveNfcMode(): 'mock' | 'hardware' | 'auto' {
+function resolveNfcMode(): 'off' | 'mock' | 'hardware' | 'auto' {
   const mockEnv = process.env.NFC_MOCK
   if (mockEnv === '1' || mockEnv === 'true') return 'mock'
   if (mockEnv === '0' || mockEnv === 'false') return 'hardware'
-  const mode = (process.env.NFC_MODE ?? 'auto').toLowerCase()
+  const mode = (process.env.NFC_MODE ?? 'off').toLowerCase()
+  if (mode === 'off' || mode === 'disabled' || mode === 'none') return 'off'
   if (mode === 'mock' || mode === 'hardware' || mode === 'auto') return mode
-  return 'auto'
+  return 'off'
 }
 
 export const NFC_MODE = resolveNfcMode()
 
 /** @deprecated используйте NFC_MODE */
 export const NFC_MOCK = NFC_MODE === 'mock'
+
+/** NFC выключен — карты только через WS playCard. */
+export const NFC_ENABLED = NFC_MODE !== 'off'
 
 /** Путь к Python-мосту PN532. */
 export const NFC_BRIDGE_SCRIPT = process.env.NFC_BRIDGE_SCRIPT

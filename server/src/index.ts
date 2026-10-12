@@ -6,6 +6,7 @@ import {
   CARD_REGISTRY_PATH,
   FRONT_DIST,
   HOST,
+  NFC_ENABLED,
   NFC_MODE,
   PORT,
   TABLETOP_CUBITS,
@@ -55,8 +56,12 @@ app.get('/api/nfc/status', (_req, res) => {
   res.json(nfc.getStatus())
 })
 
-/** Mock-скан доступен всегда (удобно даже при auto→mock). */
+/** Mock-скан — только если NFC не выключен. */
 app.post('/api/nfc/scan', (req, res) => {
+  if (!NFC_ENABLED) {
+    res.status(503).json({ error: 'NFC disabled — use WS playCard' })
+    return
+  }
   const uid = req.body?.uid
   const text = req.body?.text
   if (typeof uid !== 'string' || uid.length === 0) {
@@ -126,6 +131,8 @@ nfc.start()
 if (TABLETOP_MODE) {
   game.beginTabletop(TABLETOP_CUBITS)
   console.log(`[Tabletop] auto-started ${TABLETOP_CUBITS} cubits`)
+} else {
+  console.log('[Online] lobby + phones; cards via WS playCard')
 }
 
 server.listen(PORT, HOST, () => {
