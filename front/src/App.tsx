@@ -11,17 +11,21 @@ import { HistoryPage } from "./pages/HistoryPage/HistoryPage";
 import { SettingsPage } from "./pages/SettingsPage/SettingsPage";
 import { GamePage } from "./pages/GamePage/GamePage";
 import { GamePageWithCards } from "./pages/GamePage/legacy/GamePageWithCards";
+import { TabletopPage } from "./pages/TabletopPage/TabletopPage";
 import { InviteModal } from "./components/InviteModal/InviteModal";
+import { TabletopGate } from "./components/TabletopGate/TabletopGate";
 
 function App() {
   return (
       <SocketProvider>
         <Router>
+          <TabletopGate />
           <GameRedirect />
           <InviteModal />
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />
+              <Route path="/tabletop" element={<TabletopPage />} />
               <Route path="/info" element={<InfoPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/profile" element={<ProfilePage />} />

@@ -18,5 +18,19 @@ export const SOCKET_URL = typeof window !== 'undefined'
 export function isKioskMode(): boolean {
   if (typeof window === 'undefined') return false
   const params = new URLSearchParams(window.location.search)
-  return params.get('kiosk') === '1' || params.get('kiosk') === 'true'
+  return (
+    params.get('kiosk') === '1' ||
+    params.get('kiosk') === 'true' ||
+    params.get('tabletop') === '1' ||
+    params.get('tabletop') === 'true' ||
+    window.location.pathname.startsWith('/tabletop')
+  )
+}
+
+export function isTabletopPath(): boolean {
+  if (typeof window === 'undefined') return false
+  return (
+    window.location.pathname.startsWith('/tabletop') ||
+    new URLSearchParams(window.location.search).get('tabletop') === '1'
+  )
 }

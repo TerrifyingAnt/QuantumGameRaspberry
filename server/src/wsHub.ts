@@ -57,7 +57,17 @@ export class WsHub {
     this.disconnectHandlers.push(handler)
   }
 
+  onConnect(handler: (clientId: number) => void): void {
+    this.connectHandlers.push(handler)
+  }
+
+  /** Задать отображаемое имя (в т.ч. для виртуальных мест стола). */
+  setName(clientId: number, name: string): void {
+    this.userNames.set(clientId, name.slice(0, NAME_MAX_LENGTH))
+  }
+
   private disconnectHandlers: Array<(clientId: number) => void> = []
+  private connectHandlers: Array<(clientId: number) => void> = []
 
   private handleConnected(socket: WebSocket, _req: IncomingMessage): void {
     const id = this.nextId++
@@ -79,6 +89,8 @@ export class WsHub {
     socket.on('message', (raw) => this.handleText(id, raw.toString()))
     socket.on('close', () => this.handleDisconnected(id))
     socket.on('error', () => this.handleDisconnected(id))
+
+    for (const handler of this.connectHandlers) handler(id)
   }
 
   private handleDisconnected(clientId: number): void {

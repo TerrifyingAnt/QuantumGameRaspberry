@@ -1,8 +1,12 @@
 import {
-  CardRegistry,
-  type CardType,
-  isCardType,
-} from './cardRegistry.js'
+  TABLETOP_CUBITS,
+  TABLETOP_MODE,
+  TABLETOP_SEAT_A,
+  TABLETOP_SEAT_B,
+  TABLETOP_SEAT_NAMES,
+} from '../config.js'
+import type { NfcBridge, TagEvent } from '../nfcBridge.js'
+import type { WsHub } from '../wsHub.js'
 import {
   allowedFaces,
   applyCard,
@@ -14,15 +18,19 @@ import {
   type CardParams,
   type Target,
 } from './cardEffects.js'
+import {
+  CardRegistry,
+  type CardType,
+  isCardType,
+} from './cardRegistry.js'
 import { isFace } from './die.js'
 import { GameState } from './gameState.js'
-import type { WsHub } from '../wsHub.js'
-import type { NfcBridge, TagEvent } from '../nfcBridge.js'
 
 export class GameController {
   private readonly cards: CardRegistry
   private gameState: GameState | null = null
   private isGameOn = false
+  private readonly tabletop = TABLETOP_MODE
 
   private awaitingCard = false
   private pendingCardType: CardType | null = null
@@ -47,6 +55,12 @@ export class GameController {
     this.cards = registry
     this.cards.load()
 
+    if (this.tabletop) {
+      for (const [id, name] of Object.entries(TABLETOP_SEAT_NAMES)) {
+        this.ws.setName(Number(id), name)
+      }
+    }
+
     this.nfc.onTag((event) => this.handleTag(event))
 
     this.ws.on('startGame', (_id, data) => this.startGame(data))
@@ -54,10 +68,15 @@ export class GameController {
     this.ws.on('writeCard', (id, data) => this.writeCard(id, data))
     this.ws.on('giveUp', (id) => this.giveUp(id))
     this.ws.on('cardInput', (id, data) => this.cardInput(id, data))
+    this.ws.on('restartTabletop', () => this.restartTabletop())
   }
 
   isRunning(): boolean {
     return this.isGameOn
+  }
+
+  isTabletop(): boolean {
+    return this.tabletop
   }
 
   /** Старт партии из InviteService (после принятия приглашения). */
@@ -65,8 +84,52 @@ export class GameController {
     this.startGame({ players: playerIds, cubitCount })
   }
 
-  /** Сброс партии, если все участники отключились. */
+  /** Автостарт двух мест за общим столом. */
+  beginTabletop(cubitCount = TABLETOP_CUBITS): void {
+    if (!this.tabletop) return
+    this.startGame({
+      players: [TABLETOP_SEAT_A, TABLETOP_SEAT_B],
+      cubitCount,
+    })
+  }
+
+  restartTabletop(): void {
+    if (!this.tabletop) return
+    this.isGameOn = false
+    this.gameState = null
+    this.hasTarget = false
+    this.pendingPlayActive = false
+    this.kroneckerActive = false
+    this.kroneckerPairCards = 0
+    this.kroneckerRegisters = []
+    this.beginTabletop()
+  }
+
+  /** Новому клиенту (киоск) отдаём текущую партию стола. */
+  onClientConnected(clientId: number): void {
+    if (!this.tabletop || !this.isGameOn || !this.gameState) return
+    const startedDoc = {
+      players: this.gameState.playerIds,
+      cubitCount: this.gameState.targetRegister.dice.length,
+    }
+    this.ws.send(clientId, 'gameStarted', startedDoc)
+    this.ws.send(clientId, 'setGameState', this.buildGameStateDoc())
+    if (this.pendingPlayActive) {
+      const requirement = cardRequirement(this.pendingPlayType)
+      const prompt: Record<string, unknown> = { card: this.pendingPlayType }
+      if (requirement === 'TwoTargets') {
+        prompt.need = 'secondTarget'
+      } else {
+        prompt.need = 'face'
+        prompt.faces = allowedFaces(this.pendingPlayType, this.gameState, this.target)
+      }
+      this.ws.send(clientId, 'cardNeedsInput', prompt)
+    }
+  }
+
+  /** Сброс партии, если все участники отключились (не для стола — места виртуальные). */
   onClientDisconnected(clientId: number): void {
+    if (this.tabletop) return
     if (!this.isGameOn || !this.gameState) return
     if (!this.gameState.playerIds.includes(clientId)) return
     const stillOnline = this.gameState.playerIds.some((id) => this.ws.isOnline(id))
@@ -80,6 +143,23 @@ export class GameController {
       this.kroneckerPairCards = 0
       this.kroneckerRegisters = []
     }
+  }
+
+  /** Рассылка участникам или всем (стол). */
+  private notify(event: string, data: unknown): void {
+    if (this.tabletop || !this.gameState) {
+      this.ws.broadcast(event, data)
+      return
+    }
+    for (const id of this.gameState.playerIds) {
+      this.ws.send(id, event, data)
+    }
+  }
+
+  private isCurrentActor(clientId: number): boolean {
+    if (!this.gameState) return false
+    if (this.tabletop) return true
+    return this.gameState.playerIds[this.gameState.currentPlayer] === clientId
   }
 
   handleTag(event: TagEvent): void {
@@ -200,11 +280,7 @@ export class GameController {
       prompt.need = 'face'
       prompt.faces = allowedFaces(type, this.gameState, this.target)
     }
-    this.ws.send(
-      this.gameState.playerIds[this.gameState.currentPlayer]!,
-      'cardNeedsInput',
-      prompt,
-    )
+    this.notify('cardNeedsInput', prompt)
     console.log(`[Game] Card ${type} awaits input`)
   }
 
@@ -236,26 +312,25 @@ export class GameController {
     console.log(`[Game] Game started: ${playerIds.length} players, ${cubitCount} dice`)
 
     const startedDoc = { players: playerIds, cubitCount }
-    for (const id of playerIds) {
-      this.ws.send(id, 'gameStarted', startedDoc)
-      this.ws.send(id, 'setGameState', this.buildGameStateDoc())
-    }
+    this.notify('gameStarted', startedDoc)
+    this.notify('setGameState', this.buildGameStateDoc())
   }
 
   private selectTarget(clientId: number, data: unknown): void {
     if (!this.isGameOn || !this.gameState) return
-    const state = this.gameState
-    if (state.playerIds[state.currentPlayer] !== clientId) return
+    if (!this.isCurrentActor(clientId)) return
     if (this.pendingPlayActive) return
     if (typeof data !== 'object' || data === null) return
     const player = (data as { player?: unknown }).player
     const cubit = (data as { cubit?: unknown }).cubit
     if (typeof player !== 'number' || typeof cubit !== 'number') return
-    if (player < 0 || player >= state.registers.length) return
-    if (cubit < 0 || cubit >= state.registers[player]!.dice.length) return
+    if (player < 0 || player >= this.gameState.registers.length) return
+    if (cubit < 0 || cubit >= this.gameState.registers[player]!.dice.length) return
     this.target = { player, cubit }
     this.hasTarget = true
     console.log(`[Game] Target: player ${player} cubit ${cubit}`)
+    // Общему экрану нужен подтверждённый выбор цели.
+    this.notify('targetSelected', { player, cubit })
   }
 
   private writeCard(clientId: number, data: unknown): void {
@@ -324,11 +399,8 @@ export class GameController {
         : null,
       card: type,
     }
-    const stateDoc = this.buildGameStateDoc()
-    for (const id of this.gameState.playerIds) {
-      this.ws.send(id, 'cardPlayed', playedDoc)
-      this.ws.send(id, 'setGameState', stateDoc)
-    }
+    this.notify('cardPlayed', playedDoc)
+    this.notify('setGameState', this.buildGameStateDoc())
 
     for (let i = 0; i < this.gameState.registers.length; i++) {
       if (this.gameState.registers[i]!.equals(this.gameState.targetRegister)) {
@@ -342,8 +414,8 @@ export class GameController {
 
   private cardInput(clientId: number, data: unknown): void {
     if (!this.isGameOn || !this.gameState || !this.pendingPlayActive) return
+    if (!this.isCurrentActor(clientId)) return
     const state = this.gameState
-    if (state.playerIds[state.currentPlayer] !== clientId) return
     if (typeof data !== 'object' || data === null) return
 
     const requirement = cardRequirement(this.pendingPlayType)
@@ -396,6 +468,12 @@ export class GameController {
 
   private giveUp(clientId: number): void {
     if (!this.isGameOn || !this.gameState) return
+    if (this.tabletop) {
+      // На общем столе «сдача» = перезапуск партии.
+      console.log('[Game] Tabletop giveUp → restart')
+      this.restartTabletop()
+      return
+    }
     const senderIndex = this.gameState.playerIds.indexOf(clientId)
     if (senderIndex < 0) return
 
@@ -427,11 +505,9 @@ export class GameController {
 
     const endedDoc = {
       winnerId,
-      winnerName: this.ws.nameOf(winnerId),
+      winnerName: TABLETOP_SEAT_NAMES[winnerId] ?? this.ws.nameOf(winnerId),
     }
-    for (const id of this.gameState.playerIds) {
-      this.ws.send(id, 'gameEnded', endedDoc)
-    }
+    this.notify('gameEnded', endedDoc)
   }
 
   private refusePlay(reason: string): void {
@@ -439,7 +515,7 @@ export class GameController {
     this.pendingPlayActive = false
     console.log(`[Game] Card refused: ${reason}`)
     if (!this.gameState) return
-    this.ws.send(this.gameState.playerIds[this.gameState.currentPlayer]!, 'cantPlay', reason)
+    this.notify('cantPlay', reason)
   }
 
   private buildGameStateDoc(): Record<string, unknown> {

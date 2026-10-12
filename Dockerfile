@@ -38,7 +38,9 @@ ENV NODE_ENV=production \
     PYTHON_BIN=python3 \
     PYTHONUNBUFFERED=1 \
     NFC_MODE=mock \
-    NFC_MOCK=1
+    NFC_MOCK=1 \
+    TABLETOP_MODE=1 \
+    TABLETOP_CUBITS=4
 
 EXPOSE 8080
 VOLUME ["/app/server/data"]

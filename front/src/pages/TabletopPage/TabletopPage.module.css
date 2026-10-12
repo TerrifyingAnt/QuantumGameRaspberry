@@ -1,0 +1,209 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  max-width: none;
+  padding: 1rem 1.25rem 1.25rem;
+  gap: 0.85rem;
+  box-sizing: border-box;
+}
+
+.hint {
+  flex-shrink: 0;
+  text-align: center;
+  font-size: clamp(1rem, 2.2vw, 1.45rem);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 0.85rem 1.25rem;
+  border-radius: 1rem;
+  background: linear-gradient(120deg, rgba(108, 140, 255, 0.22), rgba(43, 54, 166, 0.35));
+  border: 1px solid rgba(157, 178, 255, 0.35);
+  color: #e8eeff;
+}
+
+.board {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr minmax(10rem, 0.7fr) 1fr;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.seat,
+.target {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 1.25rem;
+  background: rgba(22, 18, 33, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.seatA {
+  border-color: rgba(108, 140, 255, 0.35);
+}
+
+.seatB {
+  border-color: rgba(255, 180, 100, 0.35);
+}
+
+.seatActive {
+  box-shadow: 0 0 0 2px rgba(157, 178, 255, 0.55), 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.seatHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.seatName {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.seatTurn {
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9db2ff;
+  background: rgba(157, 178, 255, 0.15);
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.seatSkip {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #ffcc66;
+}
+
+.target {
+  align-items: center;
+  justify-content: center;
+  background: rgba(12, 8, 19, 0.9);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.targetLabel {
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.cubitRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: center;
+  align-content: center;
+  flex: 1;
+}
+
+.cubit {
+  position: relative;
+  width: clamp(4.5rem, 8vw, 6.5rem);
+  height: clamp(4.5rem, 8vw, 6.5rem);
+  border-radius: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+  color: inherit;
+  font: inherit;
+}
+
+.cubitReady:not(:disabled) {
+  cursor: pointer;
+}
+
+.cubitReady:not(:disabled):hover {
+  border-color: rgba(157, 178, 255, 0.7);
+}
+
+.cubitSelected {
+  border-color: #9db2ff;
+  box-shadow: 0 0 0 3px rgba(157, 178, 255, 0.35), 0 0 24px rgba(108, 140, 255, 0.35);
+  transform: scale(1.04);
+}
+
+.cubitMeasured {
+  outline: 2px dashed rgba(255, 204, 102, 0.7);
+}
+
+.cubitTarget {
+  border-style: dashed;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.cubitDice {
+  width: 78%;
+  height: 78%;
+  object-fit: contain;
+}
+
+.cubitCard {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.2rem;
+  width: 32%;
+  height: auto;
+  border-radius: 0.25rem;
+  opacity: 0.95;
+  pointer-events: none;
+}
+
+.cubitIndex {
+  position: absolute;
+  left: 0.35rem;
+  bottom: 0.2rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.meter {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+}
+
+.meterValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+.meterLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.modalText {
+  color: #ddd;
+  margin: 0 0 1rem;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .board {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+  }
+}

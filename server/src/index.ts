@@ -2,7 +2,18 @@ import fs from 'node:fs'
 import http from 'node:http'
 import path from 'node:path'
 import express from 'express'
-import { CARD_REGISTRY_PATH, FRONT_DIST, HOST, NFC_MODE, PORT } from './config.js'
+import {
+  CARD_REGISTRY_PATH,
+  FRONT_DIST,
+  HOST,
+  NFC_MODE,
+  PORT,
+  TABLETOP_CUBITS,
+  TABLETOP_MODE,
+  TABLETOP_SEAT_A,
+  TABLETOP_SEAT_B,
+  TABLETOP_SEAT_NAMES,
+} from './config.js'
 import { CardRegistry } from './game/cardRegistry.js'
 import { GameController } from './game/gameController.js'
 import { InviteService } from './inviteService.js'
@@ -23,8 +34,20 @@ app.get('/api/health', (_req, res) => {
     ok: true,
     nfcMode: NFC_MODE,
     nfc: nfcStatus,
+    tabletop: TABLETOP_MODE,
     frontDist: FRONT_DIST,
     frontReady: fs.existsSync(path.join(FRONT_DIST, 'index.html')),
+  })
+})
+
+app.get('/api/tabletop', (_req, res) => {
+  res.json({
+    enabled: TABLETOP_MODE,
+    cubitCount: TABLETOP_CUBITS,
+    seats: [
+      { id: TABLETOP_SEAT_A, name: TABLETOP_SEAT_NAMES[TABLETOP_SEAT_A] },
+      { id: TABLETOP_SEAT_B, name: TABLETOP_SEAT_NAMES[TABLETOP_SEAT_B] },
+    ],
   })
 })
 
@@ -92,17 +115,24 @@ ws.on('setOption', (_clientId, data) => {
 })
 
 const game = new GameController(ws, nfc, registry)
-const invites = new InviteService(ws, game)
+const invites = TABLETOP_MODE ? null : new InviteService(ws, game)
+ws.onConnect((clientId) => game.onClientConnected(clientId))
 ws.onDisconnect((clientId) => {
-  invites.clearForClient(clientId)
+  invites?.clearForClient(clientId)
   game.onClientDisconnected(clientId)
 })
 nfc.start()
+
+if (TABLETOP_MODE) {
+  game.beginTabletop(TABLETOP_CUBITS)
+  console.log(`[Tabletop] auto-started ${TABLETOP_CUBITS} cubits`)
+}
 
 server.listen(PORT, HOST, () => {
   console.log(`[HTTP] http://${HOST}:${PORT}`)
   console.log(`[WS]   ws://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${PORT}/ws`)
   console.log(`[NFC] mode=${NFC_MODE}`)
+  if (TABLETOP_MODE) console.log('[Tabletop] shared-screen mode ON')
 })
 
 function shutdown(): void {

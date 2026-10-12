@@ -7,6 +7,8 @@ cd "$ROOT"
 
 export NFC_MODE="${NFC_MODE:-hardware}"
 export NFC_MOCK="${NFC_MOCK:-0}"
+export TABLETOP_MODE="${TABLETOP_MODE:-1}"
+export TABLETOP_CUBITS="${TABLETOP_CUBITS:-4}"
 export PORT="${PORT:-8080}"
 export HOST="${HOST:-0.0.0.0}"
 export PYTHONUNBUFFERED="${PYTHONUNBUFFERED:-1}"

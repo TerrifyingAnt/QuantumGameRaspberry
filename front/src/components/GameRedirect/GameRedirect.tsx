@@ -16,6 +16,11 @@ export const GameRedirect = () => {
   const prevStarted = useRef<GameStartedData | null>(null)
 
   useEffect(() => {
+    // Режим общего стола живёт на /tabletop — туда не тащим телефонный /game.
+    if (pathname.startsWith('/tabletop')) {
+      prevStarted.current = started
+      return
+    }
     if (started && started !== prevStarted.current && pathname !== '/game') {
       navigate('/game')
     }

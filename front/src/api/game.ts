@@ -77,6 +77,11 @@ export function startGame(players: number[], cubitCount: number): boolean {
   return sendSocketMessage({ event: 'startGame', data: { players, cubitCount } })
 }
 
+/** Перезапуск партии в режиме общего стола. */
+export function restartTabletop(): boolean {
+  return sendSocketMessage({ event: 'restartTabletop', data: null })
+}
+
 /** Отправить selectTarget: player — индекс в players, cubit — индекс кубита в регистре. */
 export function selectTarget(player: number, cubit: number): boolean {
   return sendSocketMessage({ event: 'selectTarget', data: { player, cubit } })

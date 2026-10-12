@@ -43,3 +43,17 @@ export const NFC_BRIDGE_SCRIPT = process.env.NFC_BRIDGE_SCRIPT
   : path.join(REPO_ROOT, 'server', 'nfc', 'nfc_bridge.py')
 
 export const PYTHON_BIN = process.env.PYTHON_BIN ?? (process.platform === 'win32' ? 'python' : 'python3')
+
+/** Общий стол: сразу партия, без телефонов, виртуальные места A/B. */
+export const TABLETOP_MODE =
+  process.env.TABLETOP_MODE === '1' || process.env.TABLETOP_MODE === 'true'
+
+export const TABLETOP_CUBITS = Math.max(2, Number(process.env.TABLETOP_CUBITS ?? 4) || 4)
+
+/** Фиксированные id мест за столом (не совпадают с id WebSocket-клиентов). */
+export const TABLETOP_SEAT_A = 9001
+export const TABLETOP_SEAT_B = 9002
+export const TABLETOP_SEAT_NAMES: Record<number, string> = {
+  [TABLETOP_SEAT_A]: 'Игрок A',
+  [TABLETOP_SEAT_B]: 'Игрок B',
+}
