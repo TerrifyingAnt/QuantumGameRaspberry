@@ -4,7 +4,7 @@ import { Modal } from "../../components/Modal/Modal";
 import s from "./HomePage.module.css";
 import { Bell } from "lucide-react";
 import { getConnectionState, subscribeConnection } from "../../api/connection";
-import { startGame } from "../../api/game";
+import { getInvitesState, invitePlayer, subscribeInvites } from "../../api/invites";
 import { cubitCountLabel } from "../../lib/plural";
 import type { OnlineUser } from "../../api/events";
 import { QUBIT_COUNT_OPTIONS, type QubitCount } from "../../types/qubitDemo";
@@ -14,23 +14,22 @@ export const HomePage = () => {
     const [openModal, setOpenModal] = useState(false);
     const [selectedUser, setSelectedUser] = useState<OnlineUser | null>(null);
     const [qubitCount, setQubitCount] = useState<QubitCount>(4);
-    const [newNotification] = useState(false);
     const navigate = useNavigate();
 
     const { userId, onlineUsers } = useSyncExternalStore(subscribeConnection, getConnectionState);
+    const { incoming } = useSyncExternalStore(subscribeInvites, getInvitesState);
     const myName = onlineUsers.find((user) => user.id === userId)?.name ?? '';
-    // Себя в списке не показываем — только соперников.
     const otherUsers = onlineUsers.filter((user) => user.id !== userId);
+    const hasInvites = incoming.length > 0;
 
     const handleModal = (user: OnlineUser) => {
         setOpenModal(true);
         setSelectedUser(user);
     };
 
-    const handlePlay = () => {
+    const handleInvite = () => {
         if (!selectedUser || userId === null) return;
-        // Поле откроется само по событию gameStarted (оно приходит обоим игрокам).
-        const sent = startGame([userId, selectedUser.id], qubitCount);
+        const sent = invitePlayer(selectedUser.id, qubitCount);
         if (sent) setOpenModal(false);
     };
 
@@ -59,7 +58,7 @@ export const HomePage = () => {
                 <span className={s.usernameText}>{myName}</span>
             </div>
             <div className={s.bell} onClick={() => navigate('/notifications')}>
-                {newNotification && (
+                {hasInvites && (
                     <div className={s.newNotification}/>
                 )}
                 <Bell />
@@ -101,9 +100,9 @@ export const HomePage = () => {
           </main>
 
           {openModal && selectedUser && (
-            <Modal title="Предложить сыграть" onClose={() => setOpenModal(false)}>
+            <Modal title="Пригласить в игру" onClose={() => setOpenModal(false)}>
                 <div className={s.modalContent}>
-                    <span className={s.modalInfo}>Отправить предложение</span>
+                    <span className={s.modalInfo}>Отправить приглашение</span>
                     <span className={s.modalUsername}>{selectedUser.name}</span>
                 </div>
                 <div className={s.difficultyBlock}>
@@ -124,8 +123,13 @@ export const HomePage = () => {
                 </div>
                 <div className={s.modalButtons}>
                     <Button type="secondary" onClick={() => setOpenModal(false)}>Отмена</Button>
-                    <Button type="primary" onClick={handlePlay}>Играть</Button>
+                    <Button type="primary" onClick={handleInvite}>
+                        Пригласить
+                    </Button>
                 </div>
+                {userId === null && (
+                    <span className={s.modalInfo}>Нет связи с сервером — подождите подключения.</span>
+                )}
             </Modal>
           )}
         </>

@@ -73,6 +73,26 @@ export interface CardNeedsInputData {
   faces?: string[]
 }
 
+export interface InviteReceivedData {
+  from: number
+  fromName: string
+  cubitCount: number
+}
+
+export interface InviteDeclinedData {
+  by: number
+  byName: string
+}
+
+export interface InviteSentData {
+  to: number
+  cubitCount: number
+}
+
+export interface InviteFailedData {
+  reason: string
+}
+
 export type ServerEvent =
   | { event: 'setId'; data: number }
   | { event: 'setOnlineUsers'; data: OnlineUser[] }
@@ -86,6 +106,11 @@ export type ServerEvent =
   | { event: 'cardWritten'; data: null }
   | { event: 'cardNeedsInput'; data: CardNeedsInputData }
   | { event: 'cantPlay'; data: string }
+  | { event: 'inviteReceived'; data: InviteReceivedData }
+  | { event: 'inviteSent'; data: InviteSentData }
+  | { event: 'inviteDeclined'; data: InviteDeclinedData }
+  | { event: 'inviteCancelled'; data: { from: number } }
+  | { event: 'inviteFailed'; data: InviteFailedData }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -227,6 +252,43 @@ export function parseServerEvent(raw: unknown): ServerEvent | null {
     case 'cantPlay':
       // data — текстовый id причины (см. таблицу в EVENTS.md).
       return typeof data === 'string' ? { event, data } : null
+    case 'inviteReceived':
+      if (
+        isRecord(data) &&
+        typeof data.from === 'number' &&
+        typeof data.fromName === 'string' &&
+        typeof data.cubitCount === 'number'
+      ) {
+        return {
+          event,
+          data: {
+            from: data.from,
+            fromName: data.fromName,
+            cubitCount: data.cubitCount,
+          },
+        }
+      }
+      return null
+    case 'inviteSent':
+      if (isRecord(data) && typeof data.to === 'number' && typeof data.cubitCount === 'number') {
+        return { event, data: { to: data.to, cubitCount: data.cubitCount } }
+      }
+      return null
+    case 'inviteDeclined':
+      if (isRecord(data) && typeof data.by === 'number' && typeof data.byName === 'string') {
+        return { event, data: { by: data.by, byName: data.byName } }
+      }
+      return null
+    case 'inviteCancelled':
+      if (isRecord(data) && typeof data.from === 'number') {
+        return { event, data: { from: data.from } }
+      }
+      return null
+    case 'inviteFailed':
+      if (isRecord(data) && typeof data.reason === 'string') {
+        return { event, data: { reason: data.reason } }
+      }
+      return null
     default:
       return null
   }

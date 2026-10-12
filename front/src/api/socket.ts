@@ -1,4 +1,4 @@
-import { SOCKET_URL } from '../constants/app'
+import { getSocketUrl } from '../constants/app'
 
 export type SocketStatus = 'connecting' | 'open' | 'closed'
 
@@ -57,7 +57,7 @@ function emitMessage(raw: unknown): void {
 function openSocket(): void {
   setStatus('connecting')
 
-  const socket = new WebSocket(SOCKET_URL)
+  const socket = new WebSocket(getSocketUrl())
   ws = socket
 
   socket.onopen = () => {

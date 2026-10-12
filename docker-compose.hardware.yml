@@ -1,0 +1,22 @@
+# PN532 по I²C на Raspberry Pi.
+# docker compose -f docker-compose.yml -f docker-compose.hardware.yml up --build
+
+services:
+  app:
+    environment:
+      NFC_MOCK: "0"
+      NFC_MODE: hardware
+      # Blinka в контейнере на Pi (подставьте свою модель при необходимости)
+      BLINKA_FORCEBOARD: "${BLINKA_FORCEBOARD:-RASPBERRY_PI_4B}"
+      BLINKA_FORCECHIP: BCM2XXX
+      PYTHONUNBUFFERED: "1"
+    devices:
+      - /dev/i2c-1:/dev/i2c-1
+      - /dev/gpiomem:/dev/gpiomem
+    volumes:
+      # Доступ к системным overlay/gpio при необходимости
+      - /sys:/sys:ro
+    privileged: true
+    group_add:
+      - i2c
+      - gpio

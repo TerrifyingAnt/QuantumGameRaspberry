@@ -11,12 +11,14 @@ import { HistoryPage } from "./pages/HistoryPage/HistoryPage";
 import { SettingsPage } from "./pages/SettingsPage/SettingsPage";
 import { GamePage } from "./pages/GamePage/GamePage";
 import { GamePageWithCards } from "./pages/GamePage/legacy/GamePageWithCards";
+import { InviteModal } from "./components/InviteModal/InviteModal";
 
 function App() {
   return (
       <SocketProvider>
         <Router>
           <GameRedirect />
+          <InviteModal />
           <Layout>
             <Routes>
               <Route path="/" element={<HomePage />} />

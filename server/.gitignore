@@ -1,0 +1,4 @@
+node_modules/
+dist/
+data/card-registry.json
+data/options.json

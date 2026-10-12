@@ -11,3 +11,30 @@ body, html, h1, h2, h3, h4, h5, h6, p, span, div, button, input, textarea, selec
 *, *::before, *::after {
   box-sizing: border-box;
 }
+
+/* Raspberry Pi kiosk / большой экран */
+html.kiosk,
+body.kiosk {
+  height: 100%;
+  overflow: hidden;
+  cursor: default;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html.kiosk #root,
+body.kiosk #root {
+  height: 100%;
+}
+
+@media (min-width: 900px) {
+  html.kiosk {
+    font-size: 18px;
+  }
+}
+
+@media (min-width: 1280px) {
+  html.kiosk {
+    font-size: 20px;
+  }
+}

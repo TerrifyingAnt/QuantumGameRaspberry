@@ -1,151 +1,142 @@
-# «Суперпозиция» версия для платы
+# «Суперпозиция» — версия для Raspberry Pi
 
 <p align="center">
   <img src="front/src/assets/drawable/logo.png" alt="Логотип Суперпозиции" width="160">
 </p>
 
-<p align="center">
-  <a href="https://platformio.org/"><img src="https://img.shields.io/badge/PlatformIO-espressif32-DA5E34?style=flat&logo=platformio&logoColor=white&labelColor=3D3D3D" alt="PlatformIO"></a>
-  <a href="https://www.arduino.cc/"><img src="https://img.shields.io/badge/ESP32-Arduino-6254B8?style=flat&logo=espressif&logoColor=white&labelColor=3D3D3D" alt="ESP32 Arduino"></a>
-  <a href="https://isocpp.org/"><img src="https://img.shields.io/badge/C%2B%2B-Arduino-00599C?style=flat&logo=cplusplus&logoColor=white&labelColor=3D3D3D" alt="C++"></a>
-  <a href="https://nfc-forum.org/"><img src="https://img.shields.io/badge/PN532-NFC-2ECC71?style=flat&logo=nfc&logoColor=white&labelColor=3D3D3D" alt="PN532 NFC"></a>
-  <a href="https://react.dev/"><img src="https://img.shields.io/badge/React-19-61DAFB?style=flat&logo=react&logoColor=white&labelColor=3D3D3D" alt="React 19"></a>
-  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TypeScript-6.0-3178C6?style=flat&logo=typescript&logoColor=white&labelColor=3D3D3D" alt="TypeScript"></a>
-  <a href="https://vite.dev/"><img src="https://img.shields.io/badge/Vite-8-646CFF?style=flat&logo=vite&logoColor=white&labelColor=3D3D3D" alt="Vite 8"></a>
-</p>
+Веб-клиент и backend для игры «Суперпозиция» на **Raspberry Pi**: PN532 считывает физические карты, экран Pi показывает UI в режиме kiosk, телефоны опционально подключаются по Wi‑Fi через тот же WebSocket API.
 
-Прошивка платы и веб-клиент для игры «Суперпозиция». Плата на ESP32 держит всю игровую логику: раздаёт Wi-Fi, обслуживает веб-клиент из собственной памяти, принимает ходы по WebSocket и считывает физические карты NFC-ридером PN532. Проект использует игровые модели и отрисовку оригинальной игры «Суперпозиция».
-
-В репозитории две части: прошивка контроллера на C++ для Arduino ([controller](controller)) и веб-клиент на React ([front](front)).
-
-## Содержание
-
-- [Возможности](#возможности)
-- [Как проходит партия](#как-проходит-партия)
-- [Состав репозитория](#состав-репозитория)
-- [Требования](#требования)
-- [Сборка и прошивка](#сборка-и-прошивка)
-- [Подключение к плате](#подключение-к-плате)
-- [Структура проекта](#структура-проекта)
-- [Текущие ограничения](#текущие-ограничения)
-- [Если что-то не работает](#если-что-то-не-работает)
+Ветка `analog-version/raspberry-pi`. Папка [`controller/`](controller) — эталон логики ESP32 (не используется в runtime). Рабочий сервер — [`server/`](server).
 
 ## Возможности
 
-- Полная игровая логика на контроллере: регистры из кубитов, 21 тип карт с автоматически применяемыми эффектами, проверка победы.
-- Физические карты: RFID-метки считываются ридером PN532, привязка метки к типу карты хранится в энергонезависимой памяти платы и дубливуется в NDEF сообщении в памяти самой метки.
-- Wi-Fi без роутера: плата поднимает собственную точку доступа, клиенты подключаются напрямую.
-- Веб-клиент из памяти платы: HTTP-сервер отдаёт собранный фронтенд из файловой системы SPIFFS.
-- Захват DNS: после подключения к точке доступа любой URL открывает веб-клиент — набирать адрес не нужно.
-- WebSocket-сервер: лобби, имена игроков, синхронизация состояния партии, до 8 одновременных подключений.
+- Полная игровая логика на Node.js (паритет с ESP): регистры, 21 тип карт, победа по совпадению с целью.
+- Физические карты: PN532 по I²C, реестр UID → тип в `server/data/card-registry.json`.
+- Локальный экран: Chromium kiosk (`?kiosk=1`).
+- Опциональные телефоны: HTTP + WS на порту `8080`, тот же протокол [`EVENTS.md`](EVENTS.md).
+- Режим без железа: `NFC_MOCK=1` и `POST /api/nfc/scan`.
 
 ## Как проходит партия
 
-1. Включите плату — она поднимет точку доступа `BoardGame` (пароль `boardgame`).
-2. Подключитесь к ней с телефона или компьютера и откройте любой сайт: DNS платы перенаправит запрос на веб-клиент.
-3. В лобби задайте имена, выберите соперника и параметры партии — плата создаст регистры и разошлёт стартовое состояние.
-4. Раздайте игрокам по 6 зарегистрированных карт с метками.
-5. В свой ход выберите целевой кубит на экране и приложите карту к NFC-ридеру — плата применит эффект карты и разошлёт новое состояние всем игрокам.
-6. Когда регистр игрока совпадёт с целевым, плата объявит победителя и завершит партию.
+1. Запустите backend на Pi (`scripts/run-pi.sh`) и kiosk (`scripts/kiosk.sh`).
+2. (Опционально) Подключите телефон к той же сети и откройте `http://<ip-pi>:8080`.
+3. В лобби задайте имена, выберите соперника и число кубитов.
+4. В свой ход выберите кубит на экране и приложите карту к PN532.
+5. Совпадение регистра с целью — победа.
 
 ## Состав репозитория
 
 | Путь | Описание |
 |---|---|
-| [controller](controller) | Прошивка платы: проект PlatformIO на C++ для Arduino |
-| [front](front) | Веб-клиент на React + TypeScript + Vite |
-| [deployFirmware.ps1](deployFirmware.ps1) | Сборка и прошивка контроллера |
-| [deployFrontend.ps1](deployFrontend.ps1) | Сборка веб-клиента и загрузка его в память платы |
-| [RULES.md](RULES.md) | Правила игры |
-| [CARDS.md](CARDS.md) | Список карт |
-| [EVENTS.md](EVENTS.md) | Протокол WebSocket-событий |
+| [server](server) | Backend: игра, WebSocket, NFC-мост |
+| [front](front) | React-клиент |
+| [controller](controller) | Архив прошивки ESP32 (эталон) |
+| [scripts/run-pi.sh](scripts/run-pi.sh) | Сборка фронта + запуск сервера |
+| [scripts/kiosk.sh](scripts/kiosk.sh) | Chromium fullscreen |
+| [docker-compose.yml](docker-compose.yml) | Запуск через Docker (mock NFC по умолчанию) |
+| [docker-compose.hardware.yml](docker-compose.hardware.yml) | Overlay для PN532 на Pi |
+| [RULES.md](RULES.md) | Правила |
+| [cards.md](cards.md) | Карты |
+| [EVENTS.md](EVENTS.md) | WebSocket-протокол |
 
-## Требования
+## Требования (Pi)
 
 | Компонент | Требование |
 |---|---|
-| Плата | ESP32 DevKit v1 (DOIT) |
-| NFC-ридер | Adafruit PN532, подключение I²C: SDA — пин 21, SCL — пин 22, сигнал — пин 17 |
-| Прошивка | PlatformIO с платформой espressif32 (Arduino); библиотеки ставятся из `platformio.ini` |
-| Веб-клиент | Node.js с npm |
+| Плата | Raspberry Pi 3/4/5 с дисплеем |
+| NFC | Adafruit PN532 по **I²C** (SDA/SCL — обычно GPIO2/GPIO3) |
+| ОС | Raspberry Pi OS с Node.js 20+, Python 3 |
+| Python | `pip install -r server/nfc/requirements.txt` (+ включённый I²C: `raspi-config`) |
 
-> [!NOTE]
-> Скрипты сами находят `pio` в `%USERPROFILE%\.platformio\penv\Scripts\pio.exe` — PlatformIO не обязательно добавлять в PATH.
+## Сборка и запуск
 
-## Сборка и прошивка
+Можно **напрямую** (Node на хосте) или через **Docker Compose** — один и тот же backend/фронт.
 
-Прошивка контроллера:
+### Docker Compose
 
-```powershell
-.\deployFirmware.ps1              # сборка и загрузка в плату
-.\deployFirmware.ps1 -SkipUpload  # только проверить сборку
+```bash
+# Без ридера (NFC_MOCK=1) — ПК или Pi
+docker compose up --build
+
+# Открыть http://localhost:8080  (kiosk: http://localhost:8080/?kiosk=1)
+# Mock-скан: curl -X POST http://localhost:8080/api/nfc/scan \
+#   -H "Content-Type: application/json" \
+#   -d "{\"uid\":\"aabbccdd\",\"text\":\"pauli_x\"}"
+
+# С PN532 на Raspberry Pi (I²C /dev/i2c-1)
+docker compose -f docker-compose.yml -f docker-compose.hardware.yml up --build
 ```
 
-Веб-клиент (сборка, оптимизация картинок и запись в файловую систему платы):
+Реестр карт и настройки пишутся в volume `superposition-data`. Остановка: `docker compose down`.
 
-```powershell
-.\deployFrontend.ps1              # сборка фронта и загрузка в SPIFFS
-.\deployFrontend.ps1 -SkipUpload  # только собрать и подготовить controller/data
+### Напрямую (без Docker)
+
+```bash
+# На Pi с PN532
+chmod +x scripts/*.sh
+./scripts/run-pi.sh          # в одном терминале / systemd
+./scripts/kiosk.sh           # на экране
+
+# Разработка без ридера (Windows/Linux)
+# PowerShell: .\scripts\run-dev.ps1
+# или:
+cd server && set NFC_MOCK=1 && npm install && npm run dev
+# в другом терминале: cd front && npm run dev  → http://127.0.0.1:5173
+# mock-скан: POST http://127.0.0.1:8080/api/nfc/scan {"uid":"aabbccdd","text":"pauli_x"}
 ```
 
-Скрипт сборки фронта сам следит за лимитом памяти: сжимает картинки, а если результат не влезает в SPIFFS-партицию — падает с ошибкой до прошивки.
+Переменные окружения сервера:
 
-## Подключение к плате
+| Переменная | Default | Описание |
+|---|---|---|
+| `PORT` | `8080` | HTTP + WS |
+| `HOST` | `0.0.0.0` | Слушать на всех интерфейсах |
+| `NFC_MOCK` | `0` | `1` — без PN532 |
+| `PYTHON_BIN` | `python3` | Интерпретатор моста |
+| `FRONT_DIST` | `front/dist` | Сборка клиента |
 
-После запуска плата поднимает точку доступа `BoardGame` с паролем `boardgame` ([main.cpp](controller/src/main.cpp)). HTTP-сервер на порту 80 отдаёт веб-клиент из SPIFFS, DNS-сервер на порту 53 перенаправляет любые домены на плату ([web_server.cpp](controller/src/web_server.cpp)), поэтому клиент открывается по любому адресу. IP платы печатается в Serial при старте, обычно это `192.168.4.1`.
+## Подключение телефонов
 
-## Обмен сообщениями
+1. Pi и телефон в одной Wi‑Fi (или hotspot Pi).
+2. Узнать IP: `hostname -I`.
+3. Открыть `http://<ip>:8080` — клиент сам подключится к `ws://<ip>:8080/ws`.
 
-Игровые события ходят по WebSocket на порту 81 ([ws_controller.cpp](controller/src/ws_controller.cpp)).
-Сообщения WebSocket передаются в формете текстового JSON-документа и имеют поля:
-- `event` – строка, определяющая случившееся сообщение
-- `data` - данные, связанные с событием. Формат зависит от контретного события
+## NFC / кардридер PN532
 
-Более подробно API описан в [EVENTS.md](EVENTS.md).
+Пины (I²C1): **SDA → GPIO2 (pin 3)**, **SCL → GPIO3 (pin 5)**, **VCC → 3V3 (pin 1)**, **GND → GND**. На модуле режим **I2C**.
 
-## Структура проекта
+```bash
+sudo raspi-config   # Interface → I2C → Enable
+sudo apt install -y i2c-tools python3-pip
+i2cdetect -y 1      # ожидается адрес 0x24
+cd server && pip3 install -r nfc/requirements.txt
 
-```text
-QuantumGame/
-├── controller/              прошивка платы (PlatformIO, C++/Arduino)
-│   ├── src/
-│   │   ├── die              модель кубика
-│   │   ├── register         регистры и кубиты
-│   │   ├── game_state       состояние партии
-│   │   ├── card_effects     эффекты 21 карты
-│   │   ├── card_registry    реестр RFID-меток (NVS)
-│   │   ├── game_controller  ходы, события, победа
-│   │   ├── nfc_scanner      считывание меток PN532
-│   │   ├── ndef_helper      NDEF-записи
-│   │   ├── wifi_share       NFC-раздача Wi-Fi-конфига
-│   │   ├── ws_controller    WebSocket-сервер (порт 81)
-│   │   ├── web_server       точка доступа, DNS, HTTP (порт 80)
-│   │   └── main             точка входа
-│   ├── data/                собранный веб-клиент для SPIFFS
-│   └── platformio.ini       окружение и библиотеки
-├── front/                   веб-клиент (React + TypeScript + Vite)
-│   └── src/
-│       ├── api/             WebSocket, события, статус соединения
-│       ├── pages/           лобби, партия, профиль, история, справка
-│       ├── components/      UI-компоненты
-│       ├── game/            игровые модели для интерфейса
-│       └── assets/          карты, грани кубика, логотип, музыка
-├── hand_tracker.py          консольный трекер рук
-├── deployFirmware.ps1       прошивка контроллера
-└── deployFrontend.ps1       сборка и загрузка веб-клиента
+# Напрямую на Pi с ридером:
+NFC_MODE=hardware ./scripts/run-pi.sh
+
+# Docker на Pi с ридером:
+docker compose -f docker-compose.yml -f docker-compose.hardware.yml up --build
 ```
 
-## Текущие ограничения
+- Мост: [`server/nfc/nfc_bridge.py`](server/nfc/nfc_bridge.py) — poll + debounce, NDEF Text как на ESP.
+- Статус: `GET /api/nfc/status` (`mode`: `hardware` | `mock` | …).
+- `NFC_MODE=auto` — пробует PN532, иначе mock; `hardware` — только ридер; `mock` — только `POST /api/nfc/scan`.
+- Запись типа (`writeCard` на Info) пишет NDEF на NTAG и обновляет реестр.
+- Готовые карты: UID в реестре **или** NDEF-текст типа на метке (fallback).
 
-- До 8 одновременных WebSocket-подключений.
-- Руки и колода не отслеживаются платой: добор контролируют игроки.
-- Проверка повторного проигрывания одной и той же карты временно отключена в целях тестирования.
-- Веб-клиент ограничен партицией SPIFFS 1408 КБ.
+## Отличие от ESP
+
+| | ESP32 (`controller/`) | Raspberry Pi (`server/`) |
+|---|---|---|
+| Runtime | Arduino / SPIFFS | Node + static `front/dist` |
+| Wi‑Fi AP | SoftAP `BoardGame` | Обычная сеть / свой hotspot ОС |
+| WS | порт 81 | `/ws` на порту HTTP |
+| Реестр карт | NVS | JSON-файл |
+| Экран | только телефоны | kiosk + телефоны |
 
 ## Если что-то не работает
 
-- **Плата не поднимает точку доступа.** Откройте Serial-монитор на 9600 бод — при старте плата печатает IP и статус запуска.
-- **Веб-клиент не открывается.** Убедитесь, что телефон или компьютер подключены к Wi-Fi `BoardGame`, и попробуйте открыть `http://192.168.4.1` напрямую.
-- **Сервер отвечает `index.html not found`.** В SPIFFS нет сборки фронта — выполните `.\deployFrontend.ps1`.
-- **Карта не считывается.** Проверьте подключение PN532 по I²C: SDA — пин 21, SCL — пин 22, сигнал — пин 17, и что метка привязана к карте через запись в реестр.
-- **WebSocket не подключается.** Плата принимает соединения на порту 81, максимум 8 клиентов — отключите лишние вкладки.
+- **Нет фронта:** `cd front && npm run build`, затем перезапуск сервера.
+- **PN532 не находится:** `sudo raspi-config` → Interface → I2C; `i2cdetect -y 1` (адрес часто `0x24`).
+- **Mock на ПК:** `NFC_MOCK=1`, затем `POST /api/nfc/scan`.
+- **WebSocket с Vite:** прокси `/ws` уже в [`front/vite.config.ts`](front/vite.config.ts).

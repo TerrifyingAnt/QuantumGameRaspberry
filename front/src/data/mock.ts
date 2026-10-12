@@ -1,13 +1,4 @@
-import type { AuthorizedUser, GameHistoryItem, Invitation } from '../types/profile'
-
-export const MOCK_INVITATIONS: Invitation[] = [
-  {
-    senderId: '2',
-    senderNickname: 'NeoQubit',
-    receiverId: 'player-1',
-    sendTime: '2026-08-29T12:00:00Z',
-  },
-]
+import type { AuthorizedUser, GameHistoryItem } from '../types/profile'
 
 export const MOCK_PROFILE: AuthorizedUser = {
   id: 1,

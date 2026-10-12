@@ -1,0 +1,35 @@
+# Запуск: docker compose up --build
+# По умолчанию NFC_MOCK=1 (без PN532). С железом: docker compose -f docker-compose.yml -f docker-compose.hardware.yml up --build
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: superposition-pi:local
+    container_name: superposition
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8080"
+      # На ПК по умолчанию mock; на Pi с ридером: NFC_MODE=hardware или overlay hardware
+      NFC_MODE: "${NFC_MODE:-mock}"
+      NFC_MOCK: "${NFC_MOCK:-1}"
+      FRONT_DIST: /app/front/dist
+      CARD_REGISTRY_PATH: /app/server/data/card-registry.json
+      NFC_BRIDGE_SCRIPT: /app/server/nfc/nfc_bridge.py
+      PYTHON_BIN: python3
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - superposition-data:/app/server/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  superposition-data:

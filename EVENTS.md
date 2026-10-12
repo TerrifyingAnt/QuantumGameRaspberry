@@ -1,6 +1,9 @@
 # WebSocket-события
 
-Сервер: `WSController` (`src/ws_controller.h`), порт 81.
+Сервер:
+- ESP32: `WSController` (`controller/src/ws_controller.h`), порт **81**
+- Raspberry Pi: `WsHub` (`server/src/wsHub.ts`), путь **`/ws`** на HTTP-порту (по умолчанию **8080**)
+
 Каждое сообщение — текстовый JSON-объект:
 
 ```json
@@ -194,6 +197,20 @@ null
 | `cardInput` | объект | Доп. ввод для карты, ждущей его: `secondTarget` (объект `{player, cubit}`) или `face` (строка). Только от текущего игрока. |
 | `setPlayerName` | строка | Смена отображаемого имени. |
 | `setOption` | объект | Изменить настройку контроллера: `{"name": "...", "value": ...}`. Применяется сразу и сохраняется в память контроллера. |
+| `invitePlayer` | объект | Пригласить игрока: `{"to": <id>, "cubitCount": N}` (Raspberry Pi). |
+| `inviteResponse` | объект | Ответ на приглашение: `{"from": <id пригласившего>, "accept": true\|false}` (Raspberry Pi). |
+
+### Приглашения (Raspberry Pi)
+
+| Название | Направление | data |
+|---|---|---|
+| `inviteReceived` | приглашённому | `{"from", "fromName", "cubitCount"}` |
+| `inviteSent` | пригласившему | `{"to", "cubitCount"}` |
+| `inviteDeclined` | пригласившему | `{"by", "byName"}` |
+| `inviteCancelled` | приглашённому | `{"from"}` — отправитель отключился |
+| `inviteFailed` | отправителю ответа/приглашения | `{"reason": "offline"\|"gameInProgress"\|...}` |
+
+При `accept: true` сервер сразу шлёт `gameStarted` + `setGameState` обоим.
 
 ### `setPlayerName`
 
